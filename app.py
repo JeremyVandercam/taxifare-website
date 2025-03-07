@@ -1,3 +1,4 @@
+import datetime
 import streamlit as st
 import pandas as pd
 import requests
@@ -48,28 +49,40 @@ if url == 'https://taxifare.lewagon.ai/predict':
 
 ## Finally, we can display the prediction to the user
 '''
+st.title("🚖 NYC Taxi Fare Estimator")
 st.markdown("Enter your trip details below, and we'll estimate the fare.")
 
-# Sample Data
-df = pd.DataFrame({
-    "pickup_datetime": [pd.Timestamp("2013-07-06 17:18:00", tz='UTC')],
-    "pickup_longitude": [-73.950655],
-    "pickup_latitude": [40.783282],
-    "dropoff_longitude": [-73.984365],
-    "dropoff_latitude": [40.769802],
-    "passenger_count": [1],
-})
+# User Input Form
+with st.form("fare_form"):
+    pickup_lat = st.number_input("📍 Pickup Latitude", value=40.783282, format="%.6f")
+    dropoff_lat = st.number_input("🎯 Drop-off Latitude", value=40.769802, format="%.6f")
+    passenger_count = st.number_input("👥 Passenger Count", min_value=1, max_value=6, value=1)
+    pickup_long = st.number_input("📍 Pickup Longitude", value=-73.950655, format="%.6f")
+    dropoff_long = st.number_input("🎯 Drop-off Longitude", value=-73.984365, format="%.6f")
+    pickup_time = st.date_input("⏰ Pickup Time", value=datetime.datetime(2013, 7, 6, 17, 18, tzinfo=datetime.timezone.utc))
+    submitted = st.form_submit_button("Estimate Fare")
 
-# User Editable Data
-st.subheader("📍 Trip Details")
-edited_df = st.data_editor(df, num_rows="dynamic")
+# Process User Input
+if submitted:
+    params = {
+        "pickup_datetime": pickup_time.isoformat(),
+        "pickup_longitude": pickup_long,
+        "pickup_latitude": pickup_lat,
+        "dropoff_longitude": dropoff_long,
+        "dropoff_latitude": dropoff_lat,
+        "passenger_count": passenger_count,
+    }
 
-# API Call
-if st.button("Estimate Fare"):
+    url = "https://taxifare-872733186184.europe-west1.run.app/predict"
+
     try:
-        response = requests.get(url=url, params=edited_df.iloc[0].to_dict())
-        response.raise_for_status()  # Check for HTTP errors
-        fare = response.json().get("fare", "N/A")
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        fare = response.json()["fare"]
         st.success(f"💰 Estimated Fare: **${fare}**")
     except requests.exceptions.RequestException as e:
         st.error(f"Error fetching fare: {e}")
+
+# Optional: Map Visualization
+st.subheader("🗺️ Trip Map")
+st.map(pd.DataFrame({"lat": [pickup_lat, dropoff_lat], "lon": [pickup_long, dropoff_long]}))

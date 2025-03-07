@@ -1,3 +1,5 @@
 streamlit
-# pandas
+pandas
 requests
+gcsfs==x.x.x
+st-files-connection
